@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game Table demo</title>
+<link rel="stylesheet" href="table.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #14110d; color: #eee6d6; font: 14px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; gap: 6px; padding: 8px 16px; flex-wrap: wrap; align-items: center; }
+  header b { margin-right: 6px; }
+  button { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 8px; border: 1px solid #4a3e2c; background: #241d14; color: #eee6d6; }
+  button[aria-pressed="true"] { background: #6b5124; border-color: #b8913f; }
+  .table { margin: 0 16px; border-radius: 18px; overflow: hidden; height: calc(100svh - 104px); min-height: 520px; display: grid; grid-template-rows: auto 1fr auto; position: relative;
+    box-shadow: 0 0 0 6px #2b1d10, 0 0 0 8px #120c06, 0 10px 30px rgba(0,0,0,.6); }
+  .opp { position: relative; min-height: 96px; }
+  .opp .tbl-fan { width: 96px; }
+  .mid { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; padding: 8px; position: relative; z-index: 1; }
+  .mid .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .lab { font-size: 11px; opacity: .75; }
+  .me { padding: 0 8px 6px; position: relative; z-index: 2; }
+  .tools { display: flex; gap: 6px; padding: 8px 16px; flex-wrap: wrap; }
+  .gallery { display: grid; gap: 12px; padding: 8px 16px 30px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .gallery { grid-template-columns: 1fr 1fr; } .opp { min-height: 0; position: static; } .table { --card-w: 72px; } .mid { padding-top: 120px; } }
+  .swatch { border-radius: 14px; padding: 12px; display: flex; flex-wrap: wrap; gap: 12px 10px; align-items: center; }
+  .swatch h3 { width: 100%; margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .8; }
+  .row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; width: 100%; }
+</style>
+</head>
+<body>
+<header id="surf"><b>Game Table</b></header>
+<div class="table tbl-surface" id="table">
+  <div class="opp"><div id="opp"></div></div>
+  <div class="mid">
+    <div class="col"><div id="deck"></div><span class="lab">Deck</span></div>
+    <div class="col"><div id="discard"></div><span class="lab">Discard</span></div>
+    <div class="col"><div id="pot"></div><span class="lab">Pot 1,287</span></div>
+    <div class="col"><div style="display:flex;gap:8px"><span id="d1"></span><span id="d2"></span></div><span class="lab">Dice</span></div>
+    <div class="col"><div id="flipc"></div><span class="lab">Flip</span></div>
+  </div>
+  <div class="me"><div id="hand"></div></div>
+</div>
+<div class="tools">
+  <button id="bDeal">Deal</button><button id="bPlay">Play</button><button id="bRoll">Roll</button><button id="bFlip">Flip</button>
+  <button id="bMore">+5 cards</button><button id="bLess">−5</button>
+</div>
+<div class="gallery" id="gallery"></div>
+<script src="table.js"></script>
+<script>
+(function () {
+  const T = TABLE, $ = id => document.getElementById(id);
+  const SURF = [['felt-green', 'Green felt'], ['felt-blue', 'Blue felt'], ['wood-dark', 'Dark wood'], ['wood-light', 'Light wood'], ['cloth', 'Cloth']];
+  const q = new URLSearchParams(location.search);
+  let surf = q.get('s') || 'felt-green';
+  const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], SU = 'SHDC';
+  const full = []; for (const s of SU) for (const r of RANKS) full.push(r + s);
+  const shuffled = full.slice().sort((a, b) => T.hash(a + 'x') - T.hash(b + 'x'));
+  let deckN = 52 - 3, handN = +(q.get('n') || 9), played = ['7D', 'QS', '3H'], hand;
+
+  function setSurface(s) {
+    surf = s; const t = $('table');
+    t.className = 'table tbl-surface tbl-' + s;
+    document.querySelectorAll('#surf button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === s)));
+  }
+  SURF.forEach(([k, name]) => { const b = document.createElement('button'); b.textContent = name; b.dataset.s = k; b.onclick = () => setSurface(k); $('surf').appendChild(b); });
+
+  function drawHand() { hand = T.fan($('hand'), shuffled.slice(0, handN).map(c => T.pc(c)), { lift: 20 }); }
+  function drawOpp() {
+    const areas = T.seats($('opp'), [{ name: 'Ava' }, { name: 'Ben', turn: true }, { name: 'Cleo' }]);
+    areas.forEach((a, i) => {
+      const f = document.createElement('div'); f.style.setProperty('--card-w', '28px'); a.appendChild(f);
+      T.fan(f, Array.from({ length: [6, 7, 5][i] }, () => T.back({ pattern: 'lattice', cls: 'tbl-blue' })), { backs: true, across: true, spread: .3, arc: .8 });
+    });
+  }
+  function drawCenter() {
+    T.deck($('deck'), deckN, { pattern: 'lattice' });
+    T.pile($('discard'), played.map(c => T.pc(c)), { seed: 'demo' });
+    T.chips($('pot'), 1287);
+    T.die($('d1'), 5); T.die($('d2'), 3);
+    $('flipc').innerHTML = T.card(T.pc('AS'), { pattern: 'sunburst', down: true });
+    T.scatter([$('deck'), $('d1'), $('d2'), $('flipc'), $('pot')], 'demo');
+  }
+  function gallery() {
+    $('gallery').innerHTML = SURF.map(([k, name]) => `<div class="swatch tbl-surface tbl-${k}"><h3>${name}</h3>
+      <div class="row">${T.back({ pattern: 'lattice' })}${T.back({ pattern: 'diamonds', cls: 'tbl-blue' })}${T.back({ pattern: 'sunburst', cls: 'tbl-green' })}
+      ${T.pc('QH', { cls: 'tbl-bridge' })}${T.pc('8C')}${T.pc('10D')}${T.pc('9C', { cls: 'tbl-mini' }).replace('class="', 'style="--card-w:46px" class="')}
+      <div class="tbl-card tbl-square" style="display:grid;place-items:center;font-weight:800;color:#7a4a1a">7</div>
+      <div class="tbl-card tbl-tarot tbl-dark-edge" style="--card-w:50px;display:grid;place-items:center;background:#efe2c2">☾</div>
+      <div class="tbl-deck" data-g="d12"></div><div class="tbl-deck" data-g="d0"></div></div>
+      <div class="row">
+        <span class="tbl-chip v1"></span><span class="tbl-chip v5"></span><span class="tbl-chip v25"></span><span class="tbl-chip v100"></span><span class="tbl-chip v500"></span>
+        <span class="tbl-coin">5</span><span class="tbl-coin silver">1</span><span class="tbl-coin copper"></span>
+        <span class="tbl-gem"></span><span class="tbl-gem" style="--gem:#c0262f"></span><span class="tbl-gem" style="--gem:#2a5db0"></span>
+      </div>
+      <div class="row">
+        <span class="tbl-cube"></span><span class="tbl-cube" style="--piece:#e8c33a"></span><span class="tbl-cube" style="--piece:#2c7a3f"></span>
+        <span class="tbl-meeple"></span><span class="tbl-meeple" style="--piece:#d23b2e"></span>
+        <span class="tbl-pawn" style="--piece:#e4e0d4"></span><span class="tbl-pawn" style="--piece:#2b2b2b"></span>
+        <span class="tbl-die" data-g="6"></span><span class="tbl-die red" data-g="2"></span>
+        <span class="tbl-token">3</span><span class="tbl-marker"></span><span class="tbl-marker" style="--piece:#3a7bd5"></span>
+        <span class="tbl-dial" style="--deg:35deg;--dial-size:64px"></span>
+      </div></div>`).join('');
+    document.querySelectorAll('[data-g="d12"]').forEach(e => T.deck(e, 12, { pattern: 'diamonds', cls: 'tbl-blue' }));
+    document.querySelectorAll('[data-g="d0"]').forEach(e => T.deck(e, 0));
+    document.querySelectorAll('.tbl-die[data-g]').forEach(e => T.die(e, +e.dataset.g));
+  }
+
+  $('bDeal').onclick = async () => { if (!deckN) return; await T.deal($('deck'), $('hand')); deckN--; handN = Math.min(52, handN + 1); T.deck($('deck'), deckN); drawHand(); };
+  $('bPlay').onclick = async () => {
+    const sel = hand.selected(), i = sel.length ? sel[0] : hand.cards.length - 1; if (i < 0) return;
+    const code = hand.cards[i].dataset.card; await T.slide(hand.cards[i], $('discard'));
+    played.push(code); const k = shuffled.indexOf(code); shuffled.splice(k, 1); shuffled.push(code); handN--;
+    T.pile($('discard'), played.map(c => T.pc(c)), { seed: 'demo' }); drawHand();
+  };
+  $('bRoll').onclick = () => { T.roll($('d1'), 1 + Math.floor(Math.random() * 6)); T.roll($('d2'), 1 + Math.floor(Math.random() * 6)); };
+  $('bFlip').onclick = () => T.flip($('flipc').firstElementChild);
+  $('bMore').onclick = () => { handN = Math.min(40, handN + 5); drawHand(); };
+  $('bLess').onclick = () => { handN = Math.max(0, handN - 5); drawHand(); };
+
+  if (q.get('tilt')) document.querySelector('.mid').classList.add('tbl-tilt');
+  setSurface(surf); drawOpp(); drawCenter(); drawHand(); gallery();
+  if (q.get('sel')) hand.select(+q.get('sel'));
+})();
+</script>
+</body>
+</html>

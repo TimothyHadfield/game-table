@@ -1,0 +1,9 @@
+{
+  "name": "game-table",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-table look (felt, wood, cards, decks, hands, chips, dice) shared by Tim's board game sites.",
+  "scripts": {
+    "test": "node --test test/table.test.mjs"
+  }
+}
