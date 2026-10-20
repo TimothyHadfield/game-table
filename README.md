@@ -70,6 +70,9 @@ nothing when the device asks for reduced motion or `FX.settings.animations` is o
 
 ## Changelog
 
+- **2026-10-20, 1.0.1:** the flip card no longer relies on `backface-visibility` alone (Playwright
+  WebKit ignores it and showed the back face up); faces now swap visibility at the 90° midpoint.
+  `flip()` only resolves on the inner card's own transition. Re-copy table.css + table.js.
 - **2026-10-20, 1.0.0:** first release. 5 surfaces, cards in 5 ratios, 3 backs, flip, standard
   faces, deck, pile, fan, seats, chips, coins, gems, cubes, meeples, pawns, dice + roll, dial,
   tokens, markers, deal / slide / flip motion.

@@ -1,6 +1,6 @@
 {
   "name": "game-table",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Real-table look (felt, wood, cards, decks, hands, chips, dice) shared by Tim's board game sites.",
   "scripts": {
