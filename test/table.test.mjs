@@ -118,6 +118,32 @@ test('playing card faces', () => {
   assert.match(T.pc('QD'), /tbl-court/);
 });
 
+test('fan relayouts on the next frame, never inside the ResizeObserver callback (WebKit loop error)', () => {
+  const fakeEl = (w) => {
+    const props = {};
+    return { nodeType: 1, clientWidth: w, offsetWidth: 56, offsetHeight: 78, innerHTML: '', children: [],
+      style: { setProperty(k, v) { props[k] = v; }, props },
+      classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+      appendChild(c) { this.children.push(c); return c; }, addEventListener() {} };
+  };
+  let cb = null, frames = [];
+  globalThis.ResizeObserver = class { constructor(f) { cb = f; } observe() {} disconnect() {} };
+  globalThis.requestAnimationFrame = (f) => { frames.push(f); return frames.length; };
+  try {
+    const hand = fakeEl(200), cards = Array.from({ length: 7 }, () => fakeEl(56));
+    const api = T.fan(hand, cards, {});
+    const before = cards[6].style.props['--x'];
+    hand.clientWidth = 361;            // hidden tab shown: the hand gets its real width
+    cb([]); cb([]);                    // two notifications in one frame
+    assert.equal(cards[6].style.props['--x'], before, 'no layout inside the observer callback');
+    assert.equal(frames.length, 1, 'one deferred relayout per frame');
+    frames.shift()();
+    assert.notEqual(cards[6].style.props['--x'], before, 'the deferred relayout uses the new width');
+    cb([]); api.disconnect(); const x = cards[6].style.props['--x']; hand.clientWidth = 200; frames.shift()();
+    assert.equal(cards[6].style.props['--x'], x, 'no relayout after disconnect');
+  } finally { delete globalThis.ResizeObserver; delete globalThis.requestAnimationFrame; }
+});
+
 test('motion is off with no document, and when FX says Animations off', () => {
   assert.equal(T.animOn(), false);
   globalThis.document = {};

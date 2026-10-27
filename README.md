@@ -64,11 +64,16 @@ nothing when the device asks for reduced motion or `FX.settings.animations` is o
 - `npm test` (`node --test test/table.test.mjs`): deck thickness (0 → 0, 52 → 13, capped), stack
   shadow layers, fan fits 5–40 cards at 361 px for 44/56/64 px cards and compresses monotonically,
   symmetric arc, seeded jitter stable and bounded, chip breakdown sums, seat order, pip counts,
-  motion gate. Proven able to fail: a mutated copy (no compression, unseeded jitter, no cap) fails 3.
+  motion gate, fan relayout deferred out of the ResizeObserver callback. Proven able to fail: a mutated copy (no compression, unseeded jitter, no cap) fails 3.
 - `demo.html`: every piece on every surface. `?s=wood-dark` picks the surface, `?n=30` the hand
   size, `?sel=3` lifts a card, `?tilt=1` tilts the centre.
 
 ## Changelog
+
+- **2026-10-27, 1.0.2:** `fan()` relayouts on the next animation frame instead of inside its
+  ResizeObserver callback (setting the hand's height there made WebKit throw "ResizeObserver loop
+  completed with undelivered notifications", e.g. Clue's hand after a tab switch or a rotation).
+  At most one relayout per frame; none after `disconnect()`. Re-copy table.js (table.css unchanged).
 
 - **2026-10-20, 1.0.1:** the flip card no longer relies on `backface-visibility` alone (Playwright
   WebKit ignores it and showed the back face up); faces now swap visibility at the 90° midpoint.
